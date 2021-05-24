@@ -46,7 +46,7 @@ contract ("Dex", accounts =>{
     it("should deposit correct amount of Eth", async () =>{
         let dex = await Dex.deployed()
         let link = await Link.deployed()
-        dex.depositEth({value: 1000});
+        await dex.depositEth({value: 1000});
         let balance = await dex.balances(accounts[0], web3.utils.fromUtf8("ETH"));
         assert.equal(balance.toNumber(), 1000);
         
@@ -55,7 +55,7 @@ contract ("Dex", accounts =>{
         let dex = await Dex.deployed()
         let link = await Link.deployed()
         let balance = await dex.balances(accounts[0], web3.utils.fromUtf8("ETH"));
-        dex.withdrawEth(500);
+        await dex.withdrawEth(500);
         let balancenew = await dex.balances(accounts[0], web3.utils.fromUtf8("ETH"));
         assert.equal(balancenew.toNumber(), (balance.toNumber() - 500));
         
