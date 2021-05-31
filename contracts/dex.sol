@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity >=0.6.0 <0.9.0;
 
 import "../contracts/wallet.sol";
 
@@ -56,63 +56,76 @@ function createLimitOrder(bytes32 ticker, Side side, uint amount, uint price) pu
 
 }
 
-function sortDescending(Order[] memory orders) private pure{
+function sortDescending(Order[] storage orders) private {
     // Bubble Sort
 
      uint l = orders.length;
-     bool swap = true;
-     uint numSwap = 0;
+     
+     if (l > 1) {
+     
+        bool swap = true;
+        
+        while(swap){
 
-     while(swap){
+            uint numSwap = 0;
 
-        for(uint i = 0; i < l -1; i++){
+            for(uint i = 0; i < l -2; i++){
 
-             Order memory temp;
-            
-             if (orders[i].price < orders[i+1].price){
-                 temp = orders[i];
-                 orders[i] = orders[i+1];
-                 orders[i+1] = temp;
-                 numSwap++;
-                 swap = true;
-             }
+                Order memory temp;
+                
+                if (orders[i].price < orders[i+1].price){
+                    temp = orders[i];
+                    orders[i] = orders[i+1];
+                    orders[i+1] = temp;
+                    numSwap++;
+                    swap = true;
+                }
+            }
+
+            if (numSwap == 0){
+                swap = false;
+            }
+    
         }
 
-        if (numSwap == 0){
-            swap = false;
-        }
- 
      }
 
 }
 
-function sortAescending(Order[] memory orders) private pure{
+function sortAescending(Order[] storage orders) private {
     // Bubble Sort
 
      uint l = orders.length;
-     bool swap = true;
-     uint numSwap = 0;
 
-     while(swap){
+     if (l > 1) {
 
-        for(uint i = 0; i < l -1; i++){
+        bool swap = true;
+        
 
-             Order memory temp;
-            
-             if (orders[i].price > orders[i+1].price){
-                 temp = orders[i];
-                 orders[i] = orders[i+1];
-                 orders[i+1] = temp;
-                 numSwap++;
-                 swap = true;
-             }
+        while(swap){
+
+            uint numSwap = 0;
+
+            for(uint i = 0; i < l -2; i++){
+
+                Order memory temp;
+                
+                if (orders[i].price > orders[i+1].price){
+                    temp = orders[i];
+                    orders[i] = orders[i+1];
+                    orders[i+1] = temp;
+                    numSwap++;
+                    swap = true;
+                }
+            }
+
+            if (numSwap == 0){
+                swap = false;
+            }
+    
         }
 
-        if (numSwap == 0){
-            swap = false;
-        }
- 
-     }
+    }
 
 }
 
