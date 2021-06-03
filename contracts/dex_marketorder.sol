@@ -148,15 +148,42 @@ function createMarketOrder(bytes32 _ticker, Side _side, uint _amount) public{
 
         for (uint i = 0; i < orders.length; i++){
 
-            if ( orders[i].amount > _amount){
-
+            if ( orders[i].amount >= _amount){
+			
+					
                 // the market order can be fulfilled through this Sell Limit Order
+				// if the buyer does not have the required eth, then the transaction should revert.
+				
+				uint ethValueOfOrder = orders[i].amount.mul(orders[i].price);
+				require(ethBalance >= ethValueOfOrder, "Eth balance is not enough for the Buy market order");
+								
                 // the buyer should transfer the eth to the seller.
-                // if the buyer does not have the required eth, then the transaction should revert.
+				orders[i].trader.transfer(orders[i].amount.mul(orders[i].price));
+				balances[msg.sender][bytes32("ETH")] = balances[msg.sender][bytes32("ETH")] - ethValueOfOrder;
+				balances[orders[i].trader][bytes32("ETH")] = balances[orders[i].trader][bytes32("ETH")] + ethValueOfOrder ;
+              
                 // the seller should transfer the required amount of token to the Buyer.
-                // the eth balance of the buyer to go down and the eth balance of the seller to go up.
+				// the eth balance of the buyer to go down and the eth balance of the seller to go up.
                 // the token balance of the buyer to go up and the token balance of the seller to go down.
+				
+				IERC20(tokenMapping[ticker].tokenAddress).transfer(msg.sender, _amount);
+				balances[msg.sender][_ticker] = balances[msg.sender][_ticker] + _amount);
+				balances[orders[i].trader][_ticker] = balances[orders[i].trader][_ticker] - _amount);
+				
+                
                 // the sell limit order in the orderbook needs to be adjusted.
+				
+				if ( orders[i].amount == _amount ){
+				
+					orderBook[_ticker][Side.SELL][i].filled = true;
+				
+				}
+				else {
+				
+					orderBook[_ticker][Side.SELL][i].amount = orderBook[_ticker][Side.SELL][i].amount - _amount;
+					orderBook[_ticker][Side.SELL][i].filled = false;
+				
+				}
 
             }
 
