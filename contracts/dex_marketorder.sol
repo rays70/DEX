@@ -132,80 +132,89 @@ function sortAescending(Order[] storage orders) private {
 
 function createMarketOrder(bytes32 _ticker, Side _side, uint _amount) public{
 
-    uint ethBalance;
-    uint tokenBalance;
-    uint price;
-    Order memory _order = Order(orderId, msg.sender, _side, _ticker, _amount, _price, false);
+	Side limitOrderSide;
+	uint ethBalance = balances[msg.sender][bytes32("ETH")];
+    uint tokenBalance = balances[msg.sender][_ticker];
+    
+    Order storage _order = Order(orderId, msg.sender, _side, _ticker, _amount, _price, false);
+	
     Order[] memory orders;
-
-    ethBalance = balances[msg.sender][bytes32("ETH")];
-    tokenBalance = balances[msg.sender][_ticker];
-
-    if (_side == Side.BUY){
-
-        orders = getOrderBook(_ticker, Side.SELL);
-        require (orders.length >0, "The Buy Market Order Can not be fulfilled now");
-
-        for (uint i = 0; i < orders.length; i++){
-
-            if ( orders[i].amount >= _amount){
+	uint price;
+	
+	if ( _side == Side.BUY ){
+	
+		limitOrderSide = Side.SELL
+	
+	}else {
+	
+		limitOrderSide = Side.BUY
+		require (tokenBalance > _amount, "The token balance is not enough to place this sell order");
+	
+	}
+	
+	orders = getOrderBook(_ticker, limitOrderSide);
+	
+	uint filledAmount = 0;
+	uint leftToFill = _amount.sub(filledAmount);
+	
+	
+	while ( leftToFill > 0 ){
+	
+		for (uint i = 0; i < orders.length; i++){
+		
 			
-					
-                // the market order can be fulfilled through this Sell Limit Order
-				// if the buyer does not have the required eth, then the transaction should revert.
+			
+			uint ethValueOfOrder = orders[i].amount.mul(orders[i].price);
 				
-				uint ethValueOfOrder = orders[i].amount.mul(orders[i].price);
+			if ( _side == Side.BUY ) {
+				
 				require(ethBalance >= ethValueOfOrder, "Eth balance is not enough for the Buy market order");
-								
-                // the buyer should transfer the eth to the seller.
-				orders[i].trader.transfer(orders[i].amount.mul(orders[i].price));
-				balances[msg.sender][bytes32("ETH")] = balances[msg.sender][bytes32("ETH")] - ethValueOfOrder;
-				balances[orders[i].trader][bytes32("ETH")] = balances[orders[i].trader][bytes32("ETH")] + ethValueOfOrder ;
-              
-                // the seller should transfer the required amount of token to the Buyer.
-				// the eth balance of the buyer to go down and the eth balance of the seller to go up.
-                // the token balance of the buyer to go up and the token balance of the seller to go down.
 				
-				IERC20(tokenMapping[ticker].tokenAddress).transfer(msg.sender, _amount);
-				balances[msg.sender][_ticker] = balances[msg.sender][_ticker] + _amount);
-				balances[orders[i].trader][_ticker] = balances[orders[i].trader][_ticker] - _amount);
+			}
+			if ( _amount < orders[i].amount ){
+
+				filledAmount = _amount;
+				leftToFill = _amount.sub(filledAmount);
+				orders[i].amount = orders[i].amount.sub(filledAmount);
+					 
+			}
+			else {
 				
-                
-                // the sell limit order in the orderbook needs to be adjusted.
+				filledAmount = orders[i].amount ;
+				leftToFill = _amount.sub(filledAmount);
+				orders[i].amount = orders[i].amount.sub(filledAmount);
+				orders[i].filled = true ;
+						
+			}
 				
-				if ( orders[i].amount == _amount ){
+			if ( _side == Side.BUY ) {
 				
-					orderBook[_ticker][Side.SELL][i].filled = true;
+				executeTrade(msg.sender, orders[i].trader, _ticker, filledAmount, ethValueOfOrder  );
 				
-				}
-				else {
+			}
+			else {	
 				
-					orderBook[_ticker][Side.SELL][i].amount = orderBook[_ticker][Side.SELL][i].amount - _amount;
-					orderBook[_ticker][Side.SELL][i].filled = false;
+				executeTrade( orders[i].trader, msg.sender, _ticker, filledAmount, ethValueOfOrder  );
 				
-				}
+			}
+			
+						
+		}
+		
+	}
+}
 
-            }
+function executeTrade(address buyer, address seller, bytes32 _ticker, uint tokenamount, uint ethValue) private {
 
-        }
-
-
-        
-    }
-    if (side == Side.SELL){
-
-        // require(tokenBalance >= amount, "Token balance is not enough");
-        orderBook[ticker][uint(side)].push(_order);
-        sortAescending(orderBook[ticker][uint(side)]);
-        orderId++ ;
-    }
-
-
-
+	// the buyer should transfer the eth to the seller.
+	balances[buyer][bytes32("ETH")] = balances[buyer][bytes32("ETH")].sub(ethValueOfOrder);
+	balances[seller][bytes32("ETH")] = balances[seller][bytes32("ETH")].add(ethValueOfOrder) ;
+	
+	// the seller should transfer the token to the buyer.
+	balances[buyer][_ticker] = balances[buyer][_ticker].add(tokenamount);
+	balances[seller][_ticker] = balances[seller][_ticker].sub(tokenamount);
 
 }
- 
-
 
 
 }
